@@ -1,0 +1,97 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'zh-hans' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Toolbox{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'toolbox/css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="top-controls">
+        <button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换主题">
+            <span class="theme-icon-light">☀️</span>
+            <span class="theme-icon-dark" style="display: none;">🌙</span>
+        </button>
+        <div class="lang-switcher">
+            {% get_current_language as CURRENT_LANGUAGE %}
+            {% get_available_languages as LANGUAGES %}
+            {% for lang_code, lang_name in LANGUAGES %}
+                {% if lang_code != CURRENT_LANGUAGE %}
+                    <form action="{% url 'set_language' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="language" value="{{ lang_code }}">
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="lang-btn" title="{% trans '切换到' %} {{ lang_name }}">
+                            {% if lang_code == 'zh-hans' %}中{% else %}EN{% endif %}
+                        </button>
+                    </form>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+    {% block extra_js %}{% endblock %}
+    <script>
+        // 主题切换功能
+        (function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            const lightIcon = themeToggle.querySelector('.theme-icon-light');
+            const darkIcon = themeToggle.querySelector('.theme-icon-dark');
+            
+            // 从 localStorage 读取主题偏好，或使用系统偏好
+            function getInitialTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme) {
+                    return savedTheme;
+                }
+                // 检测系统偏好
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    return 'dark';
+                }
+                return 'light';
+            }
+            
+            // 应用主题
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                    lightIcon.style.display = 'none';
+                    darkIcon.style.display = 'inline';
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    html.removeAttribute('data-theme');
+                    lightIcon.style.display = 'inline';
+                    darkIcon.style.display = 'none';
+                    localStorage.setItem('theme', 'light');
+                }
+            }
+            
+            // 初始化主题
+            const initialTheme = getInitialTheme();
+            setTheme(initialTheme);
+            
+            // 切换主题
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = html.getAttribute('data-theme');
+                setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            });
+            
+            // 监听系统主题变化
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                    if (!localStorage.getItem('theme')) {
+                        setTheme(e.matches ? 'dark' : 'light');
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
+
